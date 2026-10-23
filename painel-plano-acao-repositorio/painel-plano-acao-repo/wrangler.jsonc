@@ -1,0 +1,10 @@
+{
+  // Configuração do Cloudflare Workers: publica a pasta "site" como site estático.
+  // O "name" precisa ser igual ao nome do projeto no Cloudflare.
+  "name": "plano-acao-gcom",
+  "compatibility_date": "2026-10-01",
+  "assets": {
+    "directory": "./site",
+    "not_found_handling": "single-page-application"
+  }
+}

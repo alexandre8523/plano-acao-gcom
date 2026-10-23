@@ -1,0 +1,891 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Plano de Ação Giraffas</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700&family=Source+Sans+3:wght@400;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: painel operacional — cabeçalho, faixa de execução, gráficos lado a lado, tabela de ações e painel de acompanhamento da ação selecionada */
+:root {
+  --bg: #f6f7f8; --panel: #ffffff; --fg: #1b2228; --muted: #5d6973; --line: #dde2e6; --soft: #eef1f3;
+  --accent: #0e6e8c; --accent-soft: #e2f0f4;
+  --s1: #0e6e8c; --s2: #e0952b; --s3: #7a5cc0; --s4: #9aa5ae;
+  --ok: #217a4b; --ok-bg: #e3f3ea; --warn: #9a6200; --warn-bg: #fbf0dc; --bad: #b3261e; --bad-bg: #fbe7e5; --idle: #5d6973; --idle-bg: #edf0f2;
+  --display: "Archivo", "Helvetica Neue", Arial, sans-serif;
+  --body: "Source Sans 3", "Segoe UI", Arial, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #12171b; --panel: #1a2126; --fg: #e6ebee; --muted: #9aa7b1; --line: #2c363d; --soft: #222b31;
+  --accent: #5bb8d6; --accent-soft: #1d3540;
+  --s1: #5bb8d6; --s2: #f0b05a; --s3: #a78bea; --s4: #6f7c86;
+  --ok: #6fcf97; --ok-bg: #1d3427; --warn: #f0b05a; --warn-bg: #3a2e18; --bad: #f28b82; --bad-bg: #3d2220; --idle: #9aa7b1; --idle-bg: #262f35;
+  color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --bg: #12171b; --panel: #1a2126; --fg: #e6ebee; --muted: #9aa7b1; --line: #2c363d; --soft: #222b31;
+  --accent: #5bb8d6; --accent-soft: #1d3540;
+  --s1: #5bb8d6; --s2: #f0b05a; --s3: #a78bea; --s4: #6f7c86;
+  --ok: #6fcf97; --ok-bg: #1d3427; --warn: #f0b05a; --warn-bg: #3a2e18; --bad: #f28b82; --bad-bg: #3d2220; --idle: #9aa7b1; --idle-bg: #262f35;
+  color-scheme: dark; }
+body { background: var(--bg); color: var(--fg); font-family: var(--body); font-size: 15px; line-height: 1.45; }
+.wrap { max-width: 1320px; margin: 0 auto; padding-block: 24px 48px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: flex; flex-direction: column; gap: 20px; }
+h1, h2, h3 { font-family: var(--display); margin: 0; text-wrap: balance; }
+h1 { font-size: clamp(1.5rem, 3vw, 2.1rem); font-weight: 700; letter-spacing: -0.01em; }
+h2 { font-size: 1.05rem; font-weight: 700; }
+h3 { font-size: .95rem; font-weight: 700; }
+.eyebrow { font-family: var(--mono); font-size: .72rem; letter-spacing: .08em; text-transform: uppercase; color: var(--accent); }
+.take { color: var(--muted); max-width: 75ch; margin: 6px 0 0; }
+.take b { color: var(--fg); font-weight: 600; }
+.num { font-variant-numeric: tabular-nums; }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 18px; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.note { color: var(--muted); font-size: .85rem; margin: 0; }
+.kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 150px), 1fr)); gap: 12px; }
+.kpi { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; display: flex; flex-direction: column; gap: 2px; }
+.kpi .l { font-size: .8rem; color: var(--muted); }
+.kpi .v { font-family: var(--display); font-size: 1.9rem; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1.15; }
+.kpi .n { font-size: .78rem; color: var(--muted); }
+.kpi.ok .v { color: var(--ok); } .kpi.warn .v { color: var(--warn); } .kpi.bad .v { color: var(--bad); }
+.track { display: flex; height: 14px; border-radius: 7px; overflow: hidden; background: var(--soft); }
+.track span { display: block; height: 100%; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: .82rem; color: var(--muted); }
+.legend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; }
+.grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 360px), 1fr)); gap: 16px; }
+.bars { display: flex; flex-direction: column; gap: 6px; }
+.bar { display: grid; grid-template-columns: minmax(0, 13rem) 1fr; gap: 10px; align-items: center; font-size: .85rem; }
+.bar .lbl { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: right; color: var(--fg); }
+.bar .rail { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.bar .fill { display: flex; height: 16px; border-radius: 4px; overflow: hidden; min-width: 2px; }
+.bar .fill span { display: block; height: 100%; }
+.bar .val { font-variant-numeric: tabular-nums; font-weight: 600; font-size: .82rem; }
+.bar.click { cursor: pointer; border-radius: 6px; padding: 2px 4px; margin: 0 -4px; border: 0; background: none; font: inherit; color: inherit; text-align: left; }
+.bar.click:hover, .bar.click:focus-visible { background: var(--soft); outline: none; }
+.bar.dim { opacity: .4; }
+.bar.on .lbl { font-weight: 700; }
+.bar-total { border-top: 1px solid var(--line); padding-top: 8px; margin-top: 4px; }
+.bar-total .lbl { font-weight: 700; }
+.bar-total .val { font-size: .92rem; font-weight: 700; }
+.bar-total .note { font-size: .78rem; margin-left: 6px; }
+.adm-apply { border-top: 1px solid var(--line); padding-top: 12px; display: flex; flex-direction: column; gap: 8px; }
+.marca-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 6px; }
+.marca-chip { display: inline-block; padding: 3px 12px; border-radius: 999px; background: var(--accent); color: var(--panel); font-family: var(--mono); font-size: .78rem; font-weight: 500; letter-spacing: .06em; }
+.tag-marca { color: var(--accent); border-color: var(--accent); }
+.star { color: var(--s2); }
+.filters { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.filters input[type="search"], .filters select, .form input, .form select, .form textarea { font: inherit; font-size: .88rem; padding: 7px 9px; border: 1px solid var(--line); border-radius: 7px; background: var(--panel); color: var(--fg); min-width: 0; }
+.filters input[type="search"] { flex: 1 1 14rem; }
+.chk { display: inline-flex; gap: 6px; align-items: center; font-size: .88rem; }
+.btn { font: inherit; font-size: .88rem; padding: 7px 12px; border: 1px solid var(--line); border-radius: 7px; background: var(--panel); color: var(--fg); cursor: pointer; }
+.btn:hover { border-color: var(--muted); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--panel); font-weight: 600; }
+.btn:disabled { opacity: .5; cursor: not-allowed; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.count { font-size: .82rem; color: var(--muted); }
+.tbox { max-height: 34rem; overflow: auto; border: 1px solid var(--line); border-radius: 8px; }
+table { width: 100%; border-collapse: collapse; font-size: .85rem; }
+th { position: sticky; top: 0; background: var(--panel); text-align: left; font-weight: 600; padding: 0; border-bottom: 1px solid var(--line); z-index: 1; white-space: nowrap; }
+th button { font: inherit; background: none; border: 0; color: var(--fg); padding: 9px 8px; cursor: pointer; width: 100%; text-align: inherit; }
+th[aria-sort="ascending"] button::after { content: " ↑"; } th[aria-sort="descending"] button::after { content: " ↓"; }
+th.r button, td.r { text-align: right; }
+td { padding: 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+#plan tbody tr { cursor: pointer; }
+#plan tbody tr:hover td { background: var(--soft); }
+#plan tbody tr.sel td { background: var(--accent-soft); }
+.wide { min-width: 15rem; } .mid { min-width: 10rem; }
+.pill { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: .78rem; font-weight: 600; white-space: nowrap; }
+.p-alta { color: var(--bad); background: var(--bad-bg); } .p-media { color: var(--warn); background: var(--warn-bg); } .p-baixa { color: var(--ok); background: var(--ok-bg); }
+.st-nao { color: var(--idle); background: var(--idle-bg); } .st-and { color: var(--accent); background: var(--accent-soft); } .st-con { color: var(--ok); background: var(--ok-bg); } .st-can { color: var(--muted); background: var(--soft); text-decoration: line-through; }
+.late { color: var(--bad); font-weight: 600; }
+.tag { font-size: .72rem; border: 1px solid var(--line); border-radius: 4px; padding: 0 4px; margin-left: 6px; color: var(--muted); white-space: nowrap; }
+.prog { display: flex; align-items: center; gap: 6px; min-width: 6.5rem; }
+.prog .t { flex: 1; height: 6px; border-radius: 3px; background: var(--soft); overflow: hidden; }
+.prog .t span { display: block; height: 100%; background: var(--accent); }
+.prog.done .t span { background: var(--ok); }
+.prog b { font-size: .78rem; font-weight: 600; font-variant-numeric: tabular-nums; width: 2.6rem; text-align: right; }
+.detail-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr)); gap: 16px; }
+.action-box { margin: 0; padding: 12px 14px; border-left: 3px solid var(--accent); background: var(--soft); border-radius: 0 8px 8px 0; }
+.meta { display: flex; flex-wrap: wrap; gap: 4px 18px; font-size: .84rem; color: var(--muted); }
+.meta b { color: var(--fg); font-weight: 600; }
+.form { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 150px), 1fr)); gap: 10px; }
+.form label { display: flex; flex-direction: column; gap: 4px; font-size: .8rem; color: var(--muted); }
+.form .full { grid-column: 1 / -1; }
+.form textarea { min-height: 5rem; resize: vertical; }
+.form .rangew { display: flex; align-items: center; gap: 8px; }
+.form .rangew input { flex: 1; padding: 0; }
+.form .rangew output { font-variant-numeric: tabular-nums; font-weight: 600; color: var(--fg); width: 3rem; text-align: right; }
+.form-actions { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.msg { font-size: .84rem; color: var(--muted); }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { font: inherit; font-size: .76rem; padding: 2px 9px; border: 1px solid var(--line); border-radius: 999px; background: var(--soft); color: var(--fg); cursor: pointer; }
+.chip:hover { border-color: var(--muted); }
+.chip:disabled { opacity: .5; cursor: not-allowed; }
+.obs { color: var(--warn); font-size: .82rem; }
+.chip[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--panel); font-weight: 600; }
+.ttags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+.ttag { font-size: .72rem; font-weight: 600; padding: 1px 8px; border-radius: 999px; color: var(--accent); background: var(--accent-soft); }
+.msg.err { color: var(--bad); } .msg.okm { color: var(--ok); }
+.timeline { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0; }
+.timeline li { position: relative; padding: 0 0 14px 22px; border-left: 2px solid var(--line); margin-left: 6px; }
+.timeline li:last-child { border-left-color: transparent; }
+.timeline li::before { content: ""; position: absolute; left: -7px; top: 3px; width: 12px; height: 12px; border-radius: 50%; background: var(--panel); border: 2px solid var(--accent); }
+.timeline li.c::before { border-color: var(--ok); background: var(--ok); }
+.timeline .h { font-size: .8rem; color: var(--muted); }
+.timeline .b { font-size: .88rem; margin-top: 2px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.tl-chart { position: relative; border: 1px solid var(--line); border-radius: 8px; padding: 10px 10px 4px; background: var(--soft); min-height: 150px; }
+.tl-chart svg { display: block; width: 100%; height: auto; overflow: visible; }
+.tl-chart text { font-family: var(--body); font-size: 11px; fill: var(--muted); }
+.tl-chart .lbl-fg { fill: var(--fg); font-weight: 600; }
+.tl-tip { position: absolute; pointer-events: none; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; box-shadow: 0 4px 14px rgba(0,0,0,.12); padding: 6px 9px; font-size: .78rem; max-width: 15rem; z-index: 3; }
+.tl-legend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: .76rem; color: var(--muted); }
+.tl-legend i { display: inline-block; width: 14px; height: 0; border-top: 2px solid var(--accent); margin-right: 5px; vertical-align: 3px; }
+.tl-legend i.d { border-top: 2px dashed var(--bad); }
+.tl-legend i.t { border-top: 2px dotted var(--muted); }
+.tl-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.linkbtn { font: inherit; font-size: .78rem; background: none; border: 0; color: var(--accent); cursor: pointer; padding: 0; text-decoration: underline; }
+.linkbtn.del { color: var(--bad); }
+.tl-actions { display: inline-flex; gap: 12px; }
+.tl-confirm { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 6px; padding: 8px 10px; border-radius: 7px; background: var(--bad-bg); color: var(--bad); font-size: .84rem; }
+.btn.danger { background: var(--bad); border-color: var(--bad); color: var(--panel); font-weight: 600; }
+.linkbtn:disabled { color: var(--muted); cursor: not-allowed; text-decoration: none; }
+.tl-edit { display: flex; flex-direction: column; gap: 6px; margin-top: 6px; }
+.tl-edit textarea { font: inherit; font-size: .86rem; padding: 7px 9px; border: 1px solid var(--line); border-radius: 7px; background: var(--panel); color: var(--fg); min-height: 4.5rem; resize: vertical; }
+.tl-edit .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.tl-edit-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 170px), 1fr)); gap: 8px; }
+.tl-lbl { display: flex; flex-direction: column; gap: 4px; font-size: .78rem; color: var(--muted); min-width: 0; }
+.tl-lbl select, .tl-lbl input[type="text"] { font: inherit; font-size: .86rem; padding: 6px 8px; border: 1px solid var(--line); border-radius: 7px; background: var(--panel); color: var(--fg); min-width: 0; }
+.tl-lbl .rangew { display: flex; align-items: center; gap: 8px; }
+.tl-lbl .rangew input { flex: 1; }
+.tl-lbl output { font-weight: 600; color: var(--fg); width: 3rem; text-align: right; }
+.muted-cell { color: var(--muted); }
+.prog.over .t span { background: var(--bad); }
+.prog.over b { color: var(--bad); }
+.prog-auto { display: flex; align-items: baseline; gap: 8px; min-height: 2.2rem; padding-top: 6px; }
+.prog-auto output { font-family: var(--display); font-size: 1.25rem; font-weight: 700; color: var(--fg); font-variant-numeric: tabular-nums; }
+.prog-auto output.over { color: var(--bad); }
+.prog-auto small { font-size: .76rem; color: var(--muted); }
+.edited { font-size: .74rem; color: var(--muted); font-style: italic; }
+.empty { padding: 18px; text-align: center; color: var(--muted); font-size: .88rem; }
+.banner { font-size: .85rem; padding: 8px 12px; border-radius: 8px; background: var(--warn-bg); color: var(--warn); }
+@media (prefers-reduced-motion: no-preference) { .prog .t span, .track span { transition: width .4s ease-out; } }
+
+.login { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px max(16px, env(safe-area-inset-left, 0px)); }
+.login .card { max-width: 26rem; width: 100%; }
+.login form { display: flex; flex-direction: column; gap: 10px; }
+.login input { font: inherit; padding: 9px 11px; border: 1px solid var(--line); border-radius: 7px; background: var(--panel); color: var(--fg); }
+.authbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: flex-end; font-size: .82rem; color: var(--muted); }
+.pw-box { margin: 10px 0 14px; }
+.pw-row { display: flex; flex-wrap: wrap; gap: 8px; }
+.pw-row input { font: inherit; padding: 8px 10px; border: 1px solid var(--line); border-radius: 7px; background: var(--panel); color: var(--fg); flex: 1 1 12rem; min-width: 0; }
+.adm { gap: 14px; }
+.adm-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.adm-tabs { display: flex; flex-wrap: wrap; gap: 6px; border-bottom: 1px solid var(--line); padding-bottom: 8px; }
+.adm-tab[aria-selected="true"] { background: var(--accent); border-color: var(--accent); color: var(--panel); font-weight: 600; }
+.adm-body, .adm-pane { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.adm-pane[hidden] { display: none !important; }
+.adm-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr)); gap: 12px; }
+.adm-field { display: flex; flex-direction: column; gap: 4px; font-size: .8rem; color: var(--muted); min-width: 0; }
+.adm-field small { font-size: .74rem; }
+.adm input:not([type="checkbox"]), .adm textarea, .adm-inline, #d-action-edit textarea { font: inherit; font-size: .88rem; padding: 7px 9px; border: 1px solid var(--line); border-radius: 7px; background: var(--panel); color: var(--fg); min-width: 0; width: 100%; }
+.adm input[type="file"] { padding: 6px; }
+.adm-rules { display: flex; flex-direction: column; gap: 8px; }
+.adm-rule { display: grid; grid-template-columns: minmax(0, 10rem) minmax(0, 1fr) minmax(0, 12rem) auto; gap: 8px; align-items: start; padding: 8px; border: 1px solid var(--line); border-radius: 8px; background: var(--soft); }
+.adm-rule-name { font-size: .85rem; padding-top: 8px; }
+.adm-rule-ctr { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.adm-del { color: var(--bad); }
+.adm-list { display: flex; flex-direction: column; gap: 8px; }
+.adm-list-row { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; align-items: center; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; }
+.adm-list-row .tl-confirm { flex-basis: 100%; }
+.adm-savebar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; padding: 10px 12px; margin: 0 -4px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); box-shadow: 0 6px 16px rgba(0,0,0,.08); }
+.msg.warnm { color: var(--warn); font-weight: 600; }
+.adm-preview { display: flex; flex-direction: column; gap: 10px; }
+.adm-th { display: block; padding: 9px 8px; }
+#d-action-edit { margin-top: -4px; }
+#d-action-edit .adm-field { margin-bottom: 6px; }
+@media (max-width: 720px) { .adm-rule { grid-template-columns: 1fr; } }
+.sem-dados > section:not(#admin), .sem-dados > .grid2, .sem-dados > p.note { display: none !important; }
+.modo-ajustes > section:not(#admin), .modo-ajustes > .grid2, .modo-ajustes > p.note, .modo-ajustes #take { display: none !important; }
+.btn.nav.ativo { background: var(--accent); border-color: var(--accent); color: var(--panel); font-weight: 600; }
+.head-row { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px; align-items: flex-start; }
+</style>
+<style>[hidden]{display:none!important} body{margin:0} *,*::before,*::after{box-sizing:border-box}</style>
+</head>
+<body>
+<div class="login" id="login" hidden>
+  <div class="card">
+    <h1 style="font-size:1.5rem">Plano de Ação - Suporte Gcom</h1>
+    <form id="l-form">
+      <input type="email" id="l-email" required placeholder="nome@gcom.com.br" autocomplete="email" aria-label="E-mail">
+      <input type="password" id="l-senha" placeholder="Senha" autocomplete="current-password" aria-label="Senha">
+      <button class="btn primary" type="submit" id="l-enviar">Entrar</button>
+      <button class="btn" type="button" id="l-link">Receber link de acesso por e-mail</button>
+      <button class="btn" type="button" id="l-ms" hidden>Entrar com Microsoft</button>
+    </form>
+    <span class="msg" id="l-msg" role="status"></span>
+  </div>
+</div>
+
+<div class="wrap" id="app" hidden>
+  <header>
+    <div class="head-row">
+      <div class="eyebrow" id="h-eyebrow">Suporte Gcom</div>
+      <div class="authbar"><span id="u-email"></span><button class="btn nav" type="button" id="u-painel" hidden>Painel</button><button class="btn nav" type="button" id="u-admin" hidden>Ajustes</button><button class="btn" type="button" id="u-senha">Alterar senha</button><button class="btn" type="button" id="u-sair">Sair</button></div>
+    </div>
+    <div class="pw-box card" id="pw-box" hidden>
+      <h3>Alterar senha</h3>
+      <div class="pw-row">
+        <input type="password" id="pw-nova" placeholder="Nova senha (mín. 6 caracteres)" autocomplete="new-password" aria-label="Nova senha">
+        <input type="password" id="pw-conf" placeholder="Repita a nova senha" autocomplete="new-password" aria-label="Repita a nova senha">
+        <button class="btn primary" type="button" id="pw-salvar">Salvar senha</button>
+        <button class="btn" type="button" id="pw-cancelar">Cancelar</button>
+      </div>
+      <span class="msg" id="pw-msg" role="status"></span>
+    </div>
+    <h1 id="h-title">Plano de Ação - Giraffas</h1>
+    <div class="marca-row" id="h-marca" hidden></div>
+    <p class="take" id="take"></p>
+  </header>
+
+  <section class="card adm" id="admin" hidden aria-label="Ajustes"></section>
+
+  <section class="kpis" id="kpis" aria-label="Indicadores"></section>
+
+  <section class="card" id="andamento">
+    <div style="display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px;align-items:baseline">
+      <h2>Andamento do plano</h2><span class="count" id="sync">Conectando ao acompanhamento…</span>
+    </div>
+    <div class="track" id="track" role="img" aria-label="Distribuição das ações por status"></div>
+    <div class="legend" id="track-legend"></div>
+  </section>
+
+  <div class="grid2">
+    <section class="card" id="unidades">
+      <h2>Unidades com mais chamados</h2>
+      <p class="note">Chamados do mês por tipo, 15 primeiras unidades. <span class="star">★</span> = top 10 do dashboard. Clique para filtrar o plano.</p>
+      <div class="legend" id="u-legend"></div>
+      <div class="bars" id="u-bars"></div>
+    </section>
+    <div style="display:flex;flex-direction:column;gap:16px;min-width:0">
+      <section class="card" id="tipos">
+        <h2>Chamados recorrentes por tipo</h2>
+        <p class="note">Combinações de unidade e tipo com mais de 3 casos. Clique num tipo para filtrar as ações.</p>
+        <div class="bars" id="t-bars"></div>
+      </section>
+      <section class="card" id="causas">
+        <h2>Causas mais frequentes</h2>
+        <p class="note">Serviço registrado nos chamados recorrentes. Clique numa causa para filtrar as ações.</p>
+        <div class="bars" id="c-bars"></div>
+      </section>
+    </div>
+  </div>
+
+  <section class="card" id="plano">
+    <h2>Ações</h2>
+    <p class="note">Uma ação por unidade e tipo de chamado. Clique numa linha para atualizar status e registrar o percurso.</p>
+    <div class="filters">
+      <input type="search" id="f-q" placeholder="Buscar unidade, causa ou responsável" aria-label="Buscar">
+      <select id="f-status" aria-label="Status"><option value="">Todos os status</option><option>Não iniciado</option><option>Em andamento</option><option>Concluído</option><option>Cancelado</option><option value="__late">Prazo estourado</option></select>
+      <select id="f-prio" aria-label="Prioridade"><option value="">Todas as prioridades</option><option>Alta</option><option>Média</option><option>Baixa</option></select>
+      <select id="f-tipo" aria-label="Tipo"><option value="">Todos os tipos</option></select>
+      <select id="f-marca" aria-label="Marca" hidden><option value="">Todas as marcas</option></select>
+      <select id="f-uf" aria-label="UF"><option value="">Todas as UFs</option></select>
+      <select id="f-tag" aria-label="Tag"><option value="">Todas as tags</option></select>
+      <label class="chk"><input type="checkbox" id="f-top"> Só top 10</label>
+      <button class="btn" type="button" id="f-reset">Limpar filtros</button>
+    </div>
+    <span class="count" id="p-count"></span>
+    <div class="tbox">
+      <table id="plan">
+        <thead><tr>
+          <th data-k="unidade"><button type="button">Unidade</button></th>
+          <th data-k="tipo"><button type="button">Tipo</button></th>
+          <th data-k="causas"><button type="button">Principais causas</button></th>
+          <th data-k="prioridade"><button type="button">Prioridade</button></th>
+          <th data-k="responsavel"><button type="button">Responsável</button></th>
+        </tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="card" id="acao">
+    <div class="eyebrow" id="d-eyebrow">Ação selecionada</div>
+    <h2 id="d-title">Selecione uma ação na tabela</h2>
+    <p class="action-box" id="d-action"></p>
+    <div id="d-action-edit"></div>
+    <div class="meta" id="d-meta"></div>
+    <div class="detail-grid">
+      <div style="display:flex;flex-direction:column;gap:10px;min-width:0">
+        <h3>Atualizar acompanhamento</h3>
+        <div class="banner" id="d-ro" hidden></div>
+        <div class="form" id="d-form">
+          <label>Status
+            <select id="e-status"><option>Não iniciado</option><option>Em andamento</option><option>Concluído</option><option>Cancelado</option></select>
+          </label>
+          <label>Progresso
+            <span class="prog-auto"><output id="e-prog-out">0%</output><small id="e-prog-nota">calculado pelo prazo</small></span>
+          </label>
+          <label>Responsável
+            <input type="text" id="e-resp" maxlength="80">
+          </label>
+          <label>Prazo
+            <input type="date" id="e-prazo" min="2026-01-01" max="2030-12-31">
+            <small id="e-prazo-nota" class="note" hidden>Sem prazo: ação de direcionamento.</small>
+          </label>
+          <label class="full">Observações (aparece na tabela)
+            <input type="text" id="e-obs" maxlength="200" list="obs-sugestoes" placeholder="Ex.: Sem contato com a unidade">
+          </label>
+          <div class="chips full" id="e-chips" aria-label="Sugestões de observação"></div>
+          <datalist id="obs-sugestoes"></datalist>
+          <label class="full">O que foi feito (entra no percurso)
+            <textarea id="e-nota" maxlength="1000" placeholder="Ex.: Técnico local trocou o cabo da impressora de cupom; loja vai monitorar por 7 dias."></textarea>
+          </label>
+          <div class="full" style="display:flex;flex-direction:column;gap:4px">
+            <span style="font-size:.8rem;color:var(--muted)">Tags do registro (opcional, pode marcar mais de uma)</span>
+            <div class="chips" id="e-tags" role="group" aria-label="Tags do registro"></div>
+          </div>
+          <div class="form-actions">
+            <button class="btn primary" type="button" id="e-save">Salvar atualização</button>
+            <span class="msg" id="e-msg" role="status"></span>
+          </div>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:10px;min-width:0">
+        <h3>Percurso da ação</h3>
+        <div class="tl-chart" id="d-tline" role="img" aria-label="Linha do tempo do progresso da ação"></div>
+        <div class="tl-legend"><span><i></i>Progresso registrado</span><span><i class="d"></i>Prazo</span><span><i class="t"></i>Hoje</span></div>
+        <ol class="timeline" id="d-tl"></ol>
+      </div>
+    </div>
+    <h3>Chamados que originaram a ação <span class="count" id="d-tcount"></span></h3>
+    <div class="tbox" style="max-height:26rem">
+      <table id="tk">
+        <thead><tr><th class="r"><button type="button" tabindex="-1">Ticket</button></th><th><button type="button" tabindex="-1">Abertura</button></th><th><button type="button" tabindex="-1">Serviço</button></th><th><button type="button" tabindex="-1">Descrição</button></th><th><button type="button" tabindex="-1">Solução</button></th><th><button type="button" tabindex="-1">Criticidade</button></th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+
+  <p class="note">Fonte: exportação de chamados <span id="h-fonte"></span> (time Suporte, sem o tipo Inconclusivo). <span id="h-regra-prio"></span> Ação, responsável e prazo iniciais são sugestões geradas a partir da causa mais frequente; status, progresso e percurso são registrados pela equipe neste painel.</p>
+</div>
+
+<script>
+window.iniciarPainel = function (D, dbConn, sess) {
+  const CFG = (sess && sess.cfg) || window.PAINEL_PADRAO || {};
+  const TITULO = String(CFG.titulo || 'Plano de Ação - {marca}').replace(/\{marca\}/gi, D.marca ? D.marca.charAt(0) + D.marca.slice(1).toLowerCase() : 'Suporte Gcom');
+  document.title = `${TITULO} · ${D.periodo}`;
+  document.getElementById('h-title').textContent = `${TITULO} (${D.periodo})`;
+  document.getElementById('h-eyebrow').textContent = `${CFG.subtitulo || 'Suporte Gcom'} · chamados de ${D.inicio.split('-').reverse().join('/')} a ${D.fim.split('-').reverse().join('/')}`;
+  document.getElementById('h-fonte').textContent = D.fonte || '';
+  { const pr = CFG.prioridade || {}; const am = Number(pr.altaMin) || 5, mm = Number(pr.mediaMin) || 4;
+    document.getElementById('h-regra-prio').textContent = (CFG.prioridadePor === 'tipo' ? 'Prioridade pelo total de chamados do mesmo tipo na unidade' : 'Prioridade pela causa (serviço) que mais se repete na ação') + `: alta com ${am} casos ou mais, média com ${mm}${am - 1 > mm ? ' a ' + (am - 1) : ''}, baixa abaixo disso.`; }
+  const $ = (id) => document.getElementById(id);
+  const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
+  const nf = new Intl.NumberFormat('pt-BR');
+  const pf = new Intl.NumberFormat('pt-BR', { style: 'percent', maximumFractionDigits: 0 });
+  const fDate = (s) => { if (!s) return '—'; const [y, m, d] = s.slice(0, 10).split('-'); return `${d}/${m}/${y}`; };
+  const fDT = (iso) => { const d = new Date(iso); return isNaN(d) ? '' : d.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }); };
+  const norm = (s) => String(s ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+  const today = () => { const t = new Date(); return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}-${String(t.getDate()).padStart(2, '0')}`; };
+  const STATUS = ['Não iniciado', 'Em andamento', 'Concluído', 'Cancelado'];
+  const ST_CLS = { 'Não iniciado': 'st-nao', 'Em andamento': 'st-and', 'Concluído': 'st-con', 'Cancelado': 'st-can' };
+  const ST_COL = { 'Não iniciado': 'var(--s4)', 'Em andamento': 'var(--accent)', 'Concluído': 'var(--ok)', 'Cancelado': 'var(--line)' };
+  const PRIO_CLS = { Alta: 'p-alta', 'Média': 'p-media', Baixa: 'p-baixa' };
+  const PRIO_ORD = { Alta: 0, 'Média': 1, Baixa: 2 };
+
+  const track = {};   // id -> current state from db
+  const hist = [];    // history entries
+  let db = null, user = null, myId = null, canWrite = false, names = {};
+  const state = { q: '', status: '', prio: '', tipo: '', uf: '', marca: '', top: false, unidade: '', causa: '', tag: '', sortK: 'id', dir: 1, sel: null };
+  const TAGS = (Array.isArray(CFG.tags) && CFG.tags.length) ? CFG.tags : ['Dúvida', 'Infraestrutura', 'Direcionamento', 'Treinamento'];
+  const pickedTags = new Set();
+  const hasTag = (id, tg) => hist.some((h) => h.acao === id && Array.isArray(h.tags) && h.tags.includes(tg));
+  const normTag = (t) => String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+  const ehDirecionamento = (tags) => Array.isArray(tags) && tags.some((t) => normTag(t) === 'direcionamento');
+  // Ação com algum registro tagueado como Direcionamento fica sem prazo
+  const semPrazo = (id) => hist.some((h) => h.acao === id && ehDirecionamento(h.tags));
+  // Progresso pelo tempo do prazo: 0% no início do plano, 100% no fim do dia do prazo.
+  // Em andamento corre com o tempo (passa de 100% quando o prazo estoura); Concluído/Cancelado congelam onde pararam.
+  const INICIO_MS = new Date(String(D.geradoEm || D.fim).slice(0, 10) + 'T00:00:00').getTime();
+  const fimPrazoMs = (prazo) => new Date(String(prazo).slice(0, 10) + 'T23:59:59').getTime();
+  function pctEm(tMs, prazo) {
+    if (!prazo) return null;
+    const a = INICIO_MS, b = fimPrazoMs(prazo);
+    if (!(b > a)) return tMs >= b ? 100 : 0;
+    return Math.max(0, Math.round(((tMs - a) / (b - a)) * 100));
+  }
+  function progRegistro(h, prazo, sp) {
+    if (h.status === 'Não iniciado') return 0;
+    if (sp) return null;
+    return pctEm(new Date(h.at).getTime(), prazo);
+  }
+  function fimStatus(id, status) {
+    const hs = hist.filter((h) => h.acao === id).sort((a, b) => String(a.at).localeCompare(String(b.at)));
+    let t = null;
+    for (let i = hs.length - 1; i >= 0; i--) { if (hs[i].status === status) t = new Date(hs[i].at).getTime(); else break; }
+    return t;
+  }
+  const fmtPct = (v) => (v == null ? 'sem prazo' : v + '%');
+  const CAUSAS = {};
+  D.tickets.forEach((t) => { const k = t.unidade + '|' + t.tipo; (CAUSAS[k] = CAUSAS[k] || {}); const s = t.servico || 'Não informado'; CAUSAS[k][s] = (CAUSAS[k][s] || 0) + 1; });
+  const casosCausa = (p, c) => (CAUSAS[p.unidade + '|' + p.tipo] || {})[c] || 0;
+
+  const cur = (p) => {
+    const t = track['a' + p.id] || {};
+    const status = t.status || 'Não iniciado', prazo = t.prazo || p.prazo, sp = semPrazo(p.id), agora = Date.now();
+    let progresso;
+    if (status === 'Não iniciado') progresso = 0;
+    else if (sp) progresso = null;
+    else if (status === 'Em andamento') progresso = pctEm(agora, prazo);
+    else { const tf = fimStatus(p.id, status) ?? (t.at ? new Date(t.at).getTime() : agora); progresso = pctEm(tf, prazo); }
+    const estourado = !sp && (status === 'Não iniciado' || status === 'Em andamento') && agora > fimPrazoMs(prazo);
+    return { status, progresso, responsavel: t.responsavel || p.responsavel, prazo, obs: typeof t.obs === 'string' ? t.obs : '', at: t.at || null, semPrazo: sp,
+      estourado, concluidoAtraso: status === 'Concluído' && progresso > 100 };
+  };
+  const isLate = (c) => c.estourado;
+
+  // ---------- header & KPIs ----------
+  function drawTop() {
+    const all = D.plano.map((p) => cur(p));
+    const n = (s) => all.filter((c) => c.status === s).length;
+    const ativas = all.filter((c) => c.status !== 'Cancelado' && c.progresso != null);
+    const media = ativas.length ? ativas.reduce((a, c) => a + c.progresso, 0) / ativas.length / 100 : 0;
+    const late = all.filter(isLate).length;
+    const alta = D.plano.filter((p) => p.prioridade === 'Alta');
+    const altaPend = alta.filter((p) => !['Concluído', 'Cancelado'].includes(cur(p).status)).length;
+    const take = $('take'); take.replaceChildren();
+    const b = (t) => el('b', null, t);
+    take.append(b(nf.format(D.recorrentes)), ' dos ', b(nf.format(D.total)), ' chamados do mês (', b(pf.format(D.recorrentes / D.total)),
+      ') se repetem mais de 3 vezes no mesmo tipo e unidade e geraram ', b(nf.format(D.plano.length)), ' ações em ', b(nf.format(D.unidadesPlano)), ' unidades. ',
+      b(nf.format(n('Concluído'))), ' concluídas até agora; ', b(nf.format(altaPend)), ' de prioridade alta ainda em aberto.');
+    const k = [
+      ['Ações no plano', nf.format(D.plano.length), `${nf.format(alta.length)} de prioridade alta`, ''],
+      ['Concluídas', nf.format(n('Concluído')), pf.format(D.plano.length ? n('Concluído') / D.plano.length : 0) + ' do plano', 'ok'],
+      ['Em andamento', nf.format(n('Em andamento')), 'com atualização registrada', ''],
+      ['Não iniciadas', nf.format(n('Não iniciado')), 'aguardando início', ''],
+      ['Prazo estourado', nf.format(late), 'passou do prazo e não foi concluída', late ? 'bad' : ''],
+      ['Progresso médio', pf.format(media), 'do prazo consumido (ações ativas)', ''],
+    ];
+    $('kpis').replaceChildren(...k.map(([l, v, nt, c]) => { const d = el('div', 'kpi ' + c); d.append(el('span', 'l', l), el('span', 'v', v), el('span', 'n', nt)); return d; }));
+    const tr = $('track'); tr.replaceChildren(); const lg = $('track-legend'); lg.replaceChildren();
+    STATUS.forEach((s) => {
+      const c = n(s); const w = D.plano.length ? (c / D.plano.length) * 100 : 0;
+      if (c) { const sp = el('span'); sp.style.width = w + '%'; sp.style.background = ST_COL[s]; sp.title = `${s}: ${c}`; tr.appendChild(sp); }
+      const it = el('span'); const i = el('i'); i.style.background = ST_COL[s]; it.append(i, `${s} · ${nf.format(c)}`); lg.appendChild(it);
+    });
+    const it = el('span', late ? 'late' : null, `Prazo estourado · ${nf.format(late)}`); lg.appendChild(it);
+  }
+
+  // ---------- charts ----------
+  const SEG = [['req', 'Requisição', 'var(--s1)'], ['duv', 'Dúvida', 'var(--s2)'], ['infra', 'Incidente-Infra', 'var(--s3)'], ['outros', 'Outros incidentes', 'var(--s4)']];
+  function drawCharts() {
+    const ul = $('u-legend'); ul.replaceChildren(...SEG.map(([, n, c]) => { const s = el('span'); const i = el('i'); i.style.background = c; s.append(i, n); return s; }));
+    const max = Math.max(...D.units.map((u) => u.total));
+    $('u-bars').replaceChildren(...D.units.map((u) => {
+      const row = el('button', 'bar click' + (state.unidade === u.unidade ? ' on' : (state.unidade ? ' dim' : '')));
+      row.type = 'button';
+      row.setAttribute('aria-pressed', state.unidade === u.unidade ? 'true' : 'false');
+      row.title = `${u.unidade}: ` + SEG.map(([k, n]) => `${n} ${u[k]}`).join(', ');
+      const lbl = el('span', 'lbl', u.unidade); if (u.top10) { lbl.append(' '); lbl.appendChild(el('span', 'star', '★')); }
+      const rail = el('span', 'rail'); const fill = el('span', 'fill'); fill.style.width = `calc((100% - 2.5rem) * ${u.total / max})`;
+      SEG.forEach(([k, , c]) => { if (u[k]) { const s = el('span'); s.style.width = (u[k] / u.total * 100) + '%'; s.style.background = c; fill.appendChild(s); } });
+      rail.append(fill, el('span', 'val', nf.format(u.total)));
+      row.append(lbl, rail);
+      row.addEventListener('click', () => { state.unidade = state.unidade === u.unidade ? '' : u.unidade; state.sel = null; drawCharts(); drawPlan(); $('plano').scrollIntoView({ behavior: 'smooth', block: 'start' }); });
+      return row;
+    }));
+    const simple = (host, rows, first, onPick, picked) => {
+      const mx = Math.max(...rows.map((r) => r[1]));
+      host.replaceChildren(...rows.map(([l, v], i) => {
+        const row = el(onPick ? 'button' : 'div', 'bar' + (onPick ? ' click' : '') + (picked && picked === l ? ' on' : (picked ? ' dim' : ''))); row.title = `${l}: ${v}`;
+        if (onPick) { row.type = 'button'; row.setAttribute('aria-pressed', picked === l ? 'true' : 'false'); row.addEventListener('click', () => onPick(l)); }
+        const rail = el('span', 'rail'); const fill = el('span', 'fill'); fill.style.width = `calc((100% - 2.5rem) * ${v / mx})`;
+        const s = el('span'); s.style.width = '100%'; s.style.background = i === 0 && first ? 'var(--accent)' : 'var(--s4)'; fill.appendChild(s);
+        rail.append(fill, el('span', 'val', nf.format(v)));
+        row.append(el('span', 'lbl', l), rail); return row;
+      }));
+    };
+    simple($('t-bars'), D.tipos, true, (l) => { state.tipo = state.tipo === l ? '' : l; $('f-tipo').value = state.tipo; state.sel = null; drawCharts(); drawPlan(); $('plano').scrollIntoView({ behavior: 'smooth', block: 'start' }); }, state.tipo);
+    simple($('c-bars'), D.causas, true, (l) => { state.causa = state.causa === l ? '' : l; state.sel = null; drawCharts(); drawPlan(); $('plano').scrollIntoView({ behavior: 'smooth', block: 'start' }); }, state.causa);
+    const totalLinha = (host, rotulo, valor, nota) => {
+      const row = el('div', 'bar bar-total');
+      const rail = el('span', 'rail'); rail.append(el('span', 'val', nf.format(valor)));
+      if (nota) rail.append(el('span', 'note', nota));
+      row.append(el('span', 'lbl', rotulo), rail); host.appendChild(row);
+    };
+    const somaTipos = D.tipos.reduce((a, r) => a + r[1], 0);
+    totalLinha($('t-bars'), 'Total geral', somaTipos);
+    const somaCausas = D.causas.reduce((a, r) => a + r[1], 0);
+    totalLinha($('c-bars'), 'Total geral', somaCausas, `${pf.format(D.recorrentes ? somaCausas / D.recorrentes : 0)} dos ${nf.format(D.recorrentes)} chamados recorrentes (${D.causas.length} causas listadas)`);
+  }
+
+  // ---------- plan table ----------
+  const fill = (sel, vals) => vals.forEach((v) => sel.appendChild(new Option(v, v)));
+  fill($('f-tipo'), [...new Set(D.plano.map((p) => p.tipo))].sort());
+  fill($('f-uf'), [...new Set(D.plano.map((p) => p.uf))].sort());
+  // marca reconhecida na importação
+  const MARCAS_ACOES = [...new Set(D.plano.map((p) => p.marca).filter(Boolean))].sort();
+  const MULTI = MARCAS_ACOES.length > 1;
+  if (MULTI) { fill($('f-marca'), MARCAS_ACOES); $('f-marca').hidden = false; }
+  (() => {
+    const box = $('h-marca'); box.replaceChildren();
+    if (!D.marca) { box.hidden = false; box.append(el('span', 'note', 'Marca: não identificada nesta carga. Reimporte a planilha em Ajustes para reconhecer a marca.')); return; }
+    box.hidden = false;
+    box.append(el('span', 'note', MULTI ? 'Marcas:' : 'Marca:'), el('span', 'marca-chip', D.marca));
+    if (Array.isArray(D.marcas) && D.marcas.length > 1) box.append(el('span', 'note', D.marcas.map(([k, v]) => `${k} (${nf.format(v)} chamados)`).join(' · ')));
+  })();
+
+  function rows() {
+    const q = norm(state.q);
+    return D.plano.map((p) => ({ p, c: cur(p) })).filter(({ p, c }) =>
+      (!state.status || (state.status === '__late' ? isLate(c) : c.status === state.status))
+      && (!state.prio || p.prioridade === state.prio) && (!state.tipo || p.tipo === state.tipo) && (!state.uf || p.uf === state.uf) && (!state.marca || (p.marca || D.marca) === state.marca)
+      && (!state.top || p.top10 === 'Sim') && (!state.unidade || p.unidade === state.unidade) && (!state.causa || casosCausa(p, state.causa) > 0) && (!state.tag || hasTag(p.id, state.tag))
+      && (!q || norm([p.unidade, p.causas, c.responsavel, p.acao, p.municipio, p.tipo, c.obs, p.marca].join(' ')).includes(q)));
+  }
+  function drawPlan() {
+    let rs = rows();
+    const k = state.sortK, dir = state.dir;
+    const val = ({ p, c }) => k === 'prioridade' ? PRIO_ORD[p.prioridade] : k === 'status' ? STATUS.indexOf(c.status) : k === 'prazo' ? (c.semPrazo ? '9999-12-31' : c.prazo) : (k in c && k !== 'at') ? c[k] : p[k];
+    rs.sort((a, b) => { const va = val(a), vb = val(b); const r = typeof va === 'number' ? va - vb : String(va).localeCompare(String(vb), 'pt-BR'); return r * dir || a.p.id - b.p.id; });
+    document.querySelectorAll('#plan th').forEach((th) => th.setAttribute('aria-sort', th.dataset.k === k ? (dir > 0 ? 'ascending' : 'descending') : 'none'));
+    $('p-count').textContent = `${nf.format(rs.length)} de ${nf.format(D.plano.length)} ações` + (state.unidade ? ` · unidade ${state.unidade}` : '') + (state.causa ? ` · causa: ${state.causa}` : '') + (state.tag ? ` · tag: ${state.tag}` : '');
+    const tb = document.querySelector('#plan tbody'); tb.replaceChildren();
+    if (!rs.length) { const tr = el('tr'); const td = el('td', 'empty', 'Nenhuma ação com esses filtros. Use "Limpar filtros" para ver todas.'); td.colSpan = 5; tr.appendChild(td); tb.appendChild(tr); }
+    if (state.sel == null || !rs.some(({ p }) => p.id === state.sel)) state.sel = rs.length ? rs[0].p.id : null;
+    rs.forEach(({ p, c }) => {
+      const tr = el('tr'); if (p.id === state.sel) tr.className = 'sel';
+      const td = (t, cls) => { const x = el('td', cls, t); tr.appendChild(x); return x; };
+      const u = td(p.unidade, 'mid'); if (p.top10 === 'Sim') u.appendChild(el('span', 'tag', 'Top 10')); if (MULTI && p.marca) u.appendChild(el('span', 'tag tag-marca', p.marca));
+      td(p.tipo);
+      const cz = td(p.causas, 'wide'); if (state.causa) { cz.prepend(el('span', 'pill st-and', `${state.causa}: ${casosCausa(p, state.causa)}`), el('br')); }
+      td('').appendChild(el('span', 'pill ' + PRIO_CLS[p.prioridade], p.prioridade));
+      td(c.responsavel, 'mid');
+      tr.addEventListener('click', () => { state.sel = p.id; drawPlan(); });
+      tb.appendChild(tr);
+    });
+    drawDetail();
+  }
+
+  // ---------- detail ----------
+  let formFor = null;
+  const editing = { id: null, nota: '', tags: new Set(), msg: '', err: false };
+  const removing = { id: null, msg: '' };
+  function drawTLine(p, c, asc) {
+    const box = $('d-tline'); box.replaceChildren();
+    const NS = 'http://www.w3.org/2000/svg';
+    const mk = (n, a) => { const e = document.createElementNS(NS, n); Object.entries(a || {}).forEach(([k, v]) => e.setAttribute(k, v)); return e; };
+    const day = (s) => new Date(s.slice(0, 10) + 'T12:00:00');
+    const start = day(D.geradoEm || D.fim);
+    const pts = asc.map((h) => ({ t: new Date(h.at), v: progRegistro(h, c.prazo, c.semPrazo) ?? 0, h }));
+    const atualV = c.progresso ?? 0;
+    const yMax = Math.max(100, atualV, ...pts.map((q) => q.v));
+    const now = new Date(); const prazo = c.semPrazo ? null : day(c.prazo);
+    const t0 = new Date(Math.min(start, ...pts.map((x) => x.t)));
+    const t1 = new Date(Math.max(prazo || now, now, ...pts.map((x) => x.t)) + 86400000);
+    const W = Math.max(280, box.clientWidth - 20), H = 130, L = 34, R = 10, T = 14, B = 22;
+    const x = (d) => L + ((d - t0) / (t1 - t0)) * (W - L - R);
+    const y = (v) => T + (1 - v / yMax) * (H - T - B);
+    const svg = mk('svg', { viewBox: `0 0 ${W} ${H}`, width: '100%' });
+    [0, 50, 100].concat(yMax > 115 ? [yMax] : []).forEach((v) => { svg.appendChild(mk('line', { x1: L, x2: W - R, y1: y(v), y2: y(v), stroke: v === 100 ? 'var(--bad)' : 'var(--line)', 'stroke-width': 1, 'stroke-dasharray': v === 100 ? '4 3' : '' })); const tx = mk('text', { x: L - 6, y: y(v) + 4, 'text-anchor': 'end' }); tx.textContent = v + '%'; svg.appendChild(tx); });
+    const fmt = (d) => d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+    const tick = (d, anchor) => { const tx = mk('text', { x: x(d), y: H - 6, 'text-anchor': anchor }); tx.textContent = fmt(d); svg.appendChild(tx); };
+    tick(t0, 'start'); tick(new Date(t1 - 86400000), 'end');
+    const vline = (d, col, dash, label, anchorEnd) => { const xx = x(d); svg.appendChild(mk('line', { x1: xx, x2: xx, y1: T - 4, y2: H - B, stroke: col, 'stroke-width': 1.5, 'stroke-dasharray': dash })); const tx = mk('text', { x: xx + (anchorEnd ? -4 : 4), y: T - 4, 'text-anchor': anchorEnd ? 'end' : 'start', class: 'lbl-fg' }); tx.textContent = label; svg.appendChild(tx); };
+    const late = isLate(c);
+    if (prazo) vline(prazo, 'var(--bad)', '5 3', `Prazo ${fmt(prazo)}`, x(prazo) > W - 90);
+    if (!prazo || Math.abs(x(now) - x(prazo)) > 60) vline(now, 'var(--muted)', '2 3', prazo ? 'Hoje' : 'Hoje · sem prazo (direcionamento)', x(now) > W - 200);
+    let d = `M${x(t0)},${y(0)}`; let last = 0;
+    pts.forEach((pt) => { d += ` L${x(pt.t)},${y(pt.v)}`; last = pt.v; });
+    if (pts.length && c.status === 'Em andamento' && c.progresso != null) { d += ` L${x(Math.min(now, t1))},${y(atualV)}`; last = atualV; }
+    else if (pts.length) d += ` H${x(Math.min(now, t1))}`;
+    svg.appendChild(mk('path', { d, fill: 'none', stroke: late ? 'var(--bad)' : 'var(--accent)', 'stroke-width': 2, 'stroke-linejoin': 'round', 'stroke-linecap': 'round' }));
+    const tip = el('div', 'tl-tip'); tip.hidden = true;
+    pts.forEach((pt) => {
+      const col = pt.h.status === 'Concluído' ? 'var(--ok)' : (late ? 'var(--bad)' : 'var(--accent)');
+      const cdot = mk('circle', { cx: x(pt.t), cy: y(pt.v), r: 5, fill: 'var(--panel)', stroke: col, 'stroke-width': 2.5, tabindex: 0 });
+      const show = () => { tip.replaceChildren(el('div', 'h', `${fDT(pt.h.at)} · ${pt.h.status} · ${pt.v}%`)); if (pt.h.nota) tip.appendChild(el('div', null, pt.h.nota.length > 140 ? pt.h.nota.slice(0, 139) + '…' : pt.h.nota)); tip.hidden = false; const bx = box.getBoundingClientRect(), sx = bx.width / W; let lx = x(pt.t) * sx + 14; if (lx + tip.offsetWidth > bx.width) lx = Math.max(0, x(pt.t) * sx - tip.offsetWidth - 10); tip.style.left = lx + 'px'; tip.style.top = Math.max(0, y(pt.v) * sx - 10) + 'px'; };
+      cdot.addEventListener('mouseenter', show); cdot.addEventListener('focus', show);
+      cdot.addEventListener('mouseleave', () => { tip.hidden = true; }); cdot.addEventListener('blur', () => { tip.hidden = true; });
+      svg.appendChild(cdot);
+    });
+    if (!pts.length) { const tx = mk('text', { x: (L + W - R) / 2, y: y(50), 'text-anchor': 'middle' }); tx.textContent = 'Sem registros ainda: o primeiro salvamento começa a linha do tempo'; svg.appendChild(tx); }
+    else { const tx = mk('text', { x: Math.min(x(Math.min(now, t1)) + 4, W - R), y: y(last) - 6, 'text-anchor': x(now) > W - 40 ? 'end' : 'start', class: 'lbl-fg' }); tx.textContent = (c.progresso == null ? 'sem prazo' : last + '%') + (c.estourado ? ' · prazo estourado' : ''); svg.appendChild(tx); }
+    box.append(svg, tip);
+  }
+  const editAcao = { id: null, msg: '' };
+  function drawActionEdit(p) {
+    const box = $('d-action-edit'); box.replaceChildren();
+    if (!sess || !sess.admin) return;
+    if (editAcao.id !== p.id) {
+      const b = el('button', 'linkbtn', 'Editar ação proposta, meta e responsável sugerido'); b.type = 'button';
+      b.addEventListener('click', () => { editAcao.id = p.id; editAcao.msg = ''; drawDetail(); });
+      box.appendChild(b); return;
+    }
+    const f = el('div', 'tl-edit');
+    const a = el('textarea'); a.value = p.acao || ''; a.rows = 3; a.setAttribute('aria-label', 'Ação proposta');
+    const mt = el('input'); mt.value = p.indicador || ''; mt.setAttribute('aria-label', 'Meta');
+    const rs = el('input'); rs.value = p.responsavel || ''; rs.setAttribute('aria-label', 'Responsável sugerido');
+    [mt, rs].forEach((x) => { x.className = 'adm-inline'; });
+    const lab = (t, x) => { const l = el('label', 'adm-field'); l.append(el('span', null, t), x); return l; };
+    const row = el('div', 'row');
+    const sv = el('button', 'btn primary', 'Salvar'); sv.type = 'button';
+    const cc = el('button', 'btn', 'Cancelar'); cc.type = 'button';
+    const m = el('span', 'msg', editAcao.msg);
+    cc.addEventListener('click', () => { editAcao.id = null; drawDetail(); });
+    sv.addEventListener('click', async () => {
+      const antes = { acao: p.acao, indicador: p.indicador, responsavel: p.responsavel };
+      p.acao = a.value.trim() || antes.acao; p.indicador = mt.value.trim(); p.responsavel = rs.value.trim() || antes.responsavel;
+      sv.disabled = true; m.className = 'msg'; m.textContent = 'Salvando…';
+      try { await sess.salvarPlano(D); editAcao.id = null; drawPlan(); }
+      catch (e) { Object.assign(p, antes); sv.disabled = false; m.className = 'msg err'; m.textContent = e && e.code === 'not_granted' ? 'Sem permissão de administrador.' : 'Não foi possível salvar. Tente de novo.'; }
+    });
+    row.append(sv, cc, m);
+    f.append(lab('Ação proposta', a), lab('Meta (indicador)', mt), lab('Responsável sugerido (vale para ações ainda sem acompanhamento)', rs), row);
+    box.appendChild(f);
+  }
+  function drawDetail() {
+    const p = D.plano.find((x) => x.id === state.sel);
+    const tl = $('d-tl'); tl.replaceChildren(); const tkb = document.querySelector('#tk tbody'); tkb.replaceChildren(); $('d-meta').replaceChildren();
+    if (!p) { $('d-title').textContent = 'Selecione uma ação na tabela'; $('d-action').textContent = ''; $('d-tcount').textContent = ''; $('d-form').hidden = true; formFor = null; return; }
+    $('d-form').hidden = false;
+    const c = cur(p);
+    $('d-eyebrow').textContent = `Ação #${p.id} · prioridade ${p.prioridade.toLowerCase()}`;
+    $('d-title').textContent = `${p.unidade} · ${p.tipo}`;
+    $('d-action').textContent = p.acao;
+    drawActionEdit(p);
+    [['Marca', p.marca || D.marca || 'não identificada'], ['Casos', `${nf.format(p.qtd)} (${pf.format(p.pct_unidade)} da unidade)`]].concat(p.causa_principal ? [['Causa mais repetida', `${p.causa_principal} (${p.casos_causa})`]] : []).concat([ ['Principais causas', p.causas], ['Meta', p.indicador], ['Empresa', `${p.empresa} · ${p.municipio}/${p.uf}`]])
+      .concat(c.semPrazo ? [['Prazo', 'sem prazo (ação de direcionamento)']] : [])
+      .concat(c.obs ? [['Observações', c.obs]] : [])
+      .forEach(([k, v]) => { const s = el('span', k === 'Observações' ? 'obs' : null); s.append(el('b', null, k + ': '), v); $('d-meta').appendChild(s); });
+    if (formFor !== p.id) {
+      formFor = p.id;
+      $('e-status').value = c.status;
+      $('e-resp').value = c.responsavel; $('e-prazo').value = c.prazo; $('e-obs').value = c.obs; $('e-nota').value = ''; pickedTags.clear(); drawTagBtns(); previewProg(); $('e-msg').textContent = ''; $('e-msg').className = 'msg';
+    }
+    const hs = hist.filter((h) => h.acao === p.id).sort((a, b) => String(b.at).localeCompare(String(a.at)));
+    if (!hs.length) tl.appendChild(el('li', null)).append(el('div', 'h', 'Sem atualizações ainda'), el('div', 'b', 'A primeira atualização salva aparece aqui, com data, autor e o que foi feito.'));
+    drawTLine(p, c, hs.slice().reverse());
+    hs.forEach((h) => {
+      const li = el('li', h.status === 'Concluído' ? 'c' : null);
+      const who = names[h.by] || (h.by && h.by === myId ? 'Você' : 'Alguém da equipe');
+      const head = el('div', 'tl-head'); head.appendChild(el('div', 'h', `${fDT(h.at)} · ${who}`));
+      if (h._id && editing.id !== h._id) {
+        const acts = el('span', 'tl-actions');
+        const eb = el('button', 'linkbtn', 'Editar'); eb.type = 'button'; eb.disabled = !canWrite || !db;
+        eb.addEventListener('click', () => { removing.id = null; editing.id = h._id; editing.nota = h.nota || ''; editing.tags = new Set(Array.isArray(h.tags) ? h.tags : []); editing.status = STATUS.includes(h.status) ? h.status : 'Não iniciado';  editing.obs = h.obs || ''; editing.msg = ''; drawDetail(); const ta = document.getElementById('tl-ta'); if (ta) ta.focus(); });
+        const xb = el('button', 'linkbtn del', 'Excluir'); xb.type = 'button'; xb.disabled = !canWrite || !db;
+        xb.addEventListener('click', () => { editing.id = null; removing.id = h._id; removing.msg = ''; drawDetail(); const b = document.getElementById('tl-del-yes'); if (b) b.focus(); });
+        acts.append(eb, xb); head.appendChild(acts);
+      }
+      li.appendChild(head);
+      if (removing.id === h._id) {
+        const cf = el('div', 'tl-confirm');
+        cf.appendChild(el('span', null, removing.msg || 'Excluir este registro do percurso? Não dá para desfazer.'));
+        const yes = el('button', 'btn danger', 'Sim, excluir'); yes.type = 'button'; yes.id = 'tl-del-yes';
+        const no = el('button', 'btn', 'Cancelar'); no.type = 'button';
+        no.addEventListener('click', () => { removing.id = null; removing.msg = ''; drawDetail(); });
+        yes.addEventListener('click', async () => {
+          if (!db) return;
+          yes.disabled = true; no.disabled = true;
+          const rest = hist.filter((x) => x.acao === p.id && x._id !== h._id).sort((a, b) => String(b.at).localeCompare(String(a.at)));
+          const wasLatest = !hs.length || hs[0]._id === h._id;
+          try {
+            await db.doc('historico/' + h._id).delete();
+            if (wasLatest) {
+              const prev = rest[0];
+              await db.doc('acoes/a' + p.id).set({ acao: p.id, status: prev ? prev.status : 'Não iniciado', progresso: prev ? (Number(prev.progresso) || 0) : 0, responsavel: c.responsavel, prazo: c.prazo, obs: c.obs, at: prev ? prev.at : new Date().toISOString(), by: myId });
+            }
+            removing.id = null; removing.msg = ''; drawDetail();
+          } catch (e) {
+            const code = (e && e.code) || 'desconhecido';
+            removing.msg = code === 'not_granted' ? 'Sem permissão para excluir. Entre com sua conta ou peça acesso de edição.' : `Não foi possível excluir. Tente de novo (código: ${code}).`;
+            drawDetail();
+          }
+        });
+        cf.append(yes, no); li.appendChild(cf);
+      }
+      const line = el('div', 'b'); line.appendChild(el('span', 'pill ' + (ST_CLS[h.status] || 'st-nao'), h.status)); line.append(` ${fmtPct(progRegistro(h, c.prazo, c.semPrazo))}`);
+      if (h.mudancas) line.append(` · ${h.mudancas}`);
+      li.appendChild(line);
+      if (editing.id === h._id) {
+        const box = el('div', 'tl-edit');
+        const ta = el('textarea'); ta.id = 'tl-ta'; ta.maxLength = 1000; ta.value = editing.nota; ta.setAttribute('aria-label', 'Editar o que foi feito');
+        ta.addEventListener('input', () => { editing.nota = ta.value; });
+        const chips = el('div', 'chips');
+        TAGS.forEach((t) => { const b = el('button', 'chip', t); b.type = 'button'; b.setAttribute('aria-pressed', editing.tags.has(t) ? 'true' : 'false'); b.addEventListener('click', () => { if (editing.tags.has(t)) editing.tags.delete(t); else editing.tags.add(t); b.setAttribute('aria-pressed', editing.tags.has(t) ? 'true' : 'false'); }); chips.appendChild(b); });
+        const grid = el('div', 'tl-edit-grid');
+        const stSel = el('select'); STATUS.forEach((s2) => stSel.appendChild(new Option(s2, s2))); stSel.value = editing.status; stSel.setAttribute('aria-label', 'Status do registro');
+        const calc = () => fmtPct(progRegistro({ status: editing.status, at: h.at }, c.prazo, c.semPrazo));
+        const out = el('output', null, calc());
+        stSel.addEventListener('change', () => { editing.status = stSel.value; out.textContent = calc(); });
+        const lb = (t, ...xs) => { const l = el('label', 'tl-lbl'); l.appendChild(el('span', null, t)); xs.forEach((x) => l.appendChild(x)); return l; };
+        const rw = el('span', 'prog-auto'); rw.append(out, el('small', null, 'na data do registro'));
+        const obsIn = el('input'); obsIn.type = 'text'; obsIn.maxLength = 300; obsIn.value = editing.obs; obsIn.placeholder = 'Observação deste registro'; obsIn.setAttribute('aria-label', 'Observações do registro');
+        obsIn.addEventListener('input', () => { editing.obs = obsIn.value; });
+        grid.append(lb('Status', stSel), lb('Progresso', rw), lb('Observações (entram junto ao que foi feito)', obsIn));
+        const row = el('div', 'row');
+        const sv = el('button', 'btn primary', 'Salvar edição'); sv.type = 'button';
+        const cc = el('button', 'btn', 'Cancelar'); cc.type = 'button';
+        const m = el('span', 'msg' + (editing.err ? ' err' : ''), editing.msg || '');
+        cc.addEventListener('click', () => { editing.id = null; editing.msg = ''; editing.err = false; drawDetail(); });
+        sv.addEventListener('click', async () => {
+          if (!db) return;
+          sv.disabled = true; m.className = 'msg'; m.textContent = 'Salvando…';
+          try {
+            const novoProg = progRegistro({ status: editing.status, at: h.at }, c.prazo, c.semPrazo) ?? 0;
+            await db.doc('historico/' + h._id).update({ nota: editing.nota.trim().slice(0, 1000), tags: TAGS.filter((t) => editing.tags.has(t)), status: editing.status, progresso: novoProg, obs: editing.obs.trim().slice(0, 300), editadoEm: new Date().toISOString(), editadoPor: myId });
+            const ehUltimo = hs.length && hs[0]._id === h._id;
+            if (ehUltimo) {
+              await db.doc('acoes/a' + p.id).set({ acao: p.id, status: ehUltimo ? editing.status : c.status, progresso: ehUltimo ? (editing.status === 'Em andamento' ? (pctEm(Date.now(), c.prazo) ?? 0) : novoProg) : (c.progresso ?? 0), responsavel: c.responsavel, prazo: c.prazo, obs: c.obs || '', at: new Date().toISOString(), by: myId });
+            }
+            editing.id = null; editing.msg = ''; editing.err = false; drawDetail();
+          } catch (e) {
+            const code = (e && e.code) || 'desconhecido';
+            editing.err = true; editing.msg = code === 'schema' ? 'O banco do Supabase está desatualizado: rode os arquivos supabase/atualizacao_*.sql que faltam.' : code === 'not_granted' ? 'Sem permissão para editar. Entre com sua conta ou peça acesso de edição.' : `Não foi possível salvar a edição. Tente de novo (código: ${code}).`;
+            m.className = 'msg err'; m.textContent = editing.msg; sv.disabled = false;
+          }
+        });
+        row.append(sv, cc, m); box.append(grid, ta, chips, row); li.appendChild(box);
+      } else {
+        if (h.nota) li.appendChild(el('div', 'b', h.nota));
+        if (h.obs) { const ob = el('div', 'b obs'); ob.append(el('b', null, 'Observação: '), h.obs); li.appendChild(ob); }
+        if (Array.isArray(h.tags) && h.tags.length) { const tg = el('div', 'ttags'); h.tags.forEach((t) => tg.appendChild(el('span', 'ttag', t))); li.appendChild(tg); }
+        if (h.editadoEm) li.appendChild(el('div', 'edited', `Editado em ${fDT(h.editadoEm)}` + (h.editadoPor && names[h.editadoPor] ? ` por ${names[h.editadoPor]}` : '')));
+      }
+      tl.appendChild(li);
+    });
+    const tks = D.tickets.filter((t) => t.unidade === p.unidade && t.tipo === p.tipo).sort((a, b) => a.abertura.localeCompare(b.abertura));
+    $('d-tcount').textContent = `· ${nf.format(tks.length)} tickets`;
+    tks.forEach((t) => { const tr = el('tr'); [[String(t.ticket), 'r num'], [fDate(t.abertura) + ' ' + t.abertura.slice(11, 16), null], [t.servico, 'mid'], [t.descricao, 'wide'], [t.solucao, 'wide'], [t.criticidade, null]].forEach(([v, c2]) => tr.appendChild(el('td', c2, v ?? ''))); tkb.appendChild(tr); });
+    applyRO();
+  }
+  function applyRO() {
+    const dis = !canWrite;
+    ['e-status', 'e-resp', 'e-prazo', 'e-obs', 'e-nota', 'e-save'].forEach((id) => { $(id).disabled = dis; });
+    if (!dis && typeof drawTagBtns === 'function') drawTagBtns();
+    document.querySelectorAll('#e-chips .chip, #e-tags .chip').forEach((b) => { b.disabled = dis; });
+  }
+
+  function drawTagBtns() {
+    document.querySelectorAll('#e-tags .chip').forEach((b) => b.setAttribute('aria-pressed', pickedTags.has(b.dataset.tag) ? 'true' : 'false'));
+    const p = D.plano.find((x) => x.id === state.sel);
+    const sp = (p && semPrazo(p.id)) || ehDirecionamento([...pickedTags]);
+    const pz = document.getElementById('e-prazo'); if (pz) { pz.disabled = sp || !canWrite; pz.style.opacity = sp ? '.45' : ''; }
+    const nt = document.getElementById('e-prazo-nota'); if (nt) nt.hidden = !sp;
+  }
+  TAGS.forEach((t) => {
+    const b = el('button', 'chip', t); b.type = 'button'; b.dataset.tag = t; b.setAttribute('aria-pressed', 'false');
+    b.addEventListener('click', () => { if (pickedTags.has(t)) pickedTags.delete(t); else pickedTags.add(t); drawTagBtns(); });
+    $('e-tags').appendChild(b);
+    $('f-tag').appendChild(new Option(t, t));
+  });
+  const OBS_SUG = Array.isArray(CFG.obsSugestoes) ? CFG.obsSugestoes : ['Sem contato com a unidade'];
+  OBS_SUG.forEach((s) => { $('obs-sugestoes').appendChild(new Option(s, s)); const b = el('button', 'chip', s); b.type = 'button'; b.addEventListener('click', () => { $('e-obs').value = s; $('e-obs').focus(); }); $('e-chips').appendChild(b); });
+  // Prévia do progresso no formulário: Não iniciado = 0%; demais = tempo do prazo consumido até agora
+  function progFormulario() {
+    const p = D.plano.find((x) => x.id === state.sel); if (!p) return 0;
+    const st = $('e-status').value;
+    if (st === 'Não iniciado') return 0;
+    const sp = semPrazo(p.id) || ehDirecionamento(TAGS.filter((t) => pickedTags.has(t)));
+    if (sp) return null;
+    const pz = /^\d{4}-\d{2}-\d{2}$/.test($('e-prazo').value) ? $('e-prazo').value : cur(p).prazo;
+    return pctEm(Date.now(), pz);
+  }
+  function previewProg() {
+    const v = progFormulario(), st = $('e-status').value, out = $('e-prog-out'), nt = $('e-prog-nota');
+    out.textContent = v == null ? '—' : v + '%';
+    out.className = v != null && v > 100 && st !== 'Concluído' && st !== 'Cancelado' ? 'over' : '';
+    nt.textContent = st === 'Não iniciado' ? 'ação não iniciada' : v == null ? 'sem prazo (direcionamento)' : (v > 100 && st === 'Em andamento') ? '⚠ prazo estourado' : st === 'Em andamento' ? 'corre até o dia do prazo' : 'fica congelado neste valor';
+  }
+  $('e-status').addEventListener('change', previewProg);
+  $('e-prazo').addEventListener('change', previewProg);
+  $('e-tags').addEventListener('click', () => setTimeout(previewProg, 0));
+  setInterval(() => { if (!$('d-form').hidden) previewProg(); }, 60000);
+
+  let saving = false;
+  $('e-save').addEventListener('click', async () => {
+    const p = D.plano.find((x) => x.id === state.sel); if (!p || !db || saving) return;
+    const msg = $('e-msg'); const before = cur(p);
+    const status = $('e-status').value;
+    const responsavel = $('e-resp').value.trim() || p.responsavel;
+    const prazo = (before.semPrazo || ehDirecionamento(TAGS.filter((t) => pickedTags.has(t)))) ? before.prazo : (/^\d{4}-\d{2}-\d{2}$/.test($('e-prazo').value) ? $('e-prazo').value : before.prazo);
+    const nota = $('e-nota').value.trim();
+    const obs = $('e-obs').value.trim();
+    const ch = [];
+    if (obs !== before.obs) ch.push(obs ? `observação: ${obs}` : 'observação removida');
+    if (responsavel !== before.responsavel) ch.push(`responsável: ${responsavel}`);
+    if (prazo !== before.prazo) ch.push(`prazo: ${fDate(prazo)}`);
+    const tags = TAGS.filter((t) => pickedTags.has(t));
+    const progresso = status === 'Não iniciado' ? 0 : ((before.semPrazo || ehDirecionamento(tags)) ? 0 : pctEm(Date.now(), prazo));
+    if (status === before.status && !ch.length && !nota && !tags.length) { msg.className = 'msg err'; msg.textContent = 'Nada mudou. Altere um campo ou descreva o que foi feito.'; return; }
+    saving = true; $('e-save').disabled = true; msg.className = 'msg'; msg.textContent = 'Salvando…';
+    const at = new Date().toISOString();
+    const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+    const tryWrite = async (fn) => {
+      for (let i = 0; i < 3; i++) {
+        try { return await fn(); } catch (e) {
+          const c = e && e.code;
+          if (i < 2 && (c === 'unavailable' || c === 'resource_exhausted' || !c)) { await wait(1200 * (i + 1)); continue; }
+          throw e;
+        }
+      }
+    };
+    const histId = 'h' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+    let step = 'status';
+    try {
+      await tryWrite(() => db.doc('acoes/a' + p.id).set({ acao: p.id, status, progresso, responsavel, prazo, obs, at, by: myId }));
+      step = 'percurso';
+      await tryWrite(() => db.doc('historico/' + histId).set({ acao: p.id, status, progresso, nota: nota.slice(0, 1000), obs: obs.slice(0, 300), mudancas: ch.join(' · ').slice(0, 400), tags, at, by: myId }));
+      msg.className = 'msg okm'; msg.textContent = 'Atualização salva.'; $('e-nota').value = ''; pickedTags.clear(); drawTagBtns();
+    } catch (e) {
+      const c = (e && e.code) || 'desconhecido';
+      try { console.error('[plano] falha ao salvar', step, e); } catch (x) {}
+      msg.className = 'msg err';
+      if (c === 'schema') msg.textContent = 'O banco do Supabase está desatualizado para esta versão do painel. Rode no SQL Editor os arquivos supabase/atualizacao_*.sql que ainda não foram executados e tente de novo. Seu texto foi mantido.';
+      else if (c === 'not_granted') msg.textContent = 'Você não tem permissão para editar. Entre com sua conta Gcom ou peça acesso de edição ao dono do painel.';
+      else if (c === 'resource_exhausted' || c === 'quota_exceeded') msg.textContent = `Muitas gravações seguidas. Aguarde alguns segundos e clique em Salvar de novo (código: ${c}).`;
+      else msg.textContent = `Não foi possível salvar ${step === 'status' ? 'a atualização' : 'o registro no percurso (o status já foi salvo)'}. Seu texto foi mantido; clique em Salvar de novo (código: ${c}).`;
+    } finally { saving = false; applyRO(); }
+  });
+
+  // ---------- controls ----------
+  $('f-q').addEventListener('input', (e) => { state.q = e.target.value; state.sel = null; drawPlan(); });
+  [['f-status', 'status'], ['f-prio', 'prio'], ['f-tipo', 'tipo'], ['f-uf', 'uf'], ['f-marca', 'marca'], ['f-tag', 'tag']].forEach(([id, k]) => $(id).addEventListener('change', (e) => { state[k] = e.target.value; state.sel = null; if (k === 'tipo') drawCharts(); drawPlan(); }));
+  $('f-top').addEventListener('change', (e) => { state.top = e.target.checked; state.sel = null; drawPlan(); });
+  $('f-reset').addEventListener('click', () => { Object.assign(state, { q: '', status: '', prio: '', tipo: '', uf: '', marca: '', top: false, unidade: '', causa: '', tag: '', sel: null }); $('f-q').value = ''; $('f-top').checked = false; ['f-status', 'f-prio', 'f-tipo', 'f-uf', 'f-marca', 'f-tag'].forEach((id) => { $(id).value = ''; }); drawCharts(); drawPlan(); });
+  document.querySelectorAll('#plan th').forEach((th) => th.querySelector('button').addEventListener('click', () => { const k = th.dataset.k; if (state.sortK === k) state.dir *= -1; else { state.sortK = k; state.dir = ['qtd', 'progresso'].includes(k) ? -1 : 1; } drawPlan(); }));
+
+  function drawAll() { drawTop(); drawPlan(); }
+  drawTop(); drawCharts(); drawPlan(); applyRO();
+
+  // ---------- acompanhamento (Supabase) ----------
+  const ro = (t) => { $('d-ro').hidden = false; $('d-ro').textContent = t; };
+  db = dbConn; myId = sess.id; canWrite = !!sess.podeEditar; names[myId] = 'Você';
+  if (!canWrite) ro('Você pode ver o andamento, mas não tem permissão para editar.');
+  applyRO();
+  db.collection('acoes').onSnapshot((snap) => {
+    Object.keys(track).forEach((k) => delete track[k]);
+    snap.docs.forEach((d) => { const v = d.data(); if (v) track[d.id] = v; });
+    $('sync').textContent = `Acompanhamento ao vivo · ${nf.format(snap.size)} ações com atualização`;
+    drawAll();
+  }, (e) => { $('sync').textContent = e && e.code === 'not_granted' ? 'Sem permissão para ler o acompanhamento' : 'Não foi possível carregar o acompanhamento'; });
+  db.collection('historico').orderBy('at', 'desc').limit(1000).onSnapshot((snap) => {
+    hist.length = 0;
+    snap.docs.forEach((d) => {
+      const v = d.data(); if (!v || !Number.isFinite(v.acao)) return;
+      hist.push({ ...v, _id: d.id });
+      if (v.by && v.byNome && v.by !== myId) names[v.by] = v.byNome;
+      if (v.editadoPor && v.editadoPorNome && v.editadoPor !== myId) names[v.editadoPor] = v.editadoPorNome;
+    });
+    drawAll(); // prazo, atrasadas e filtro por tag dependem do percurso
+  }, () => {});
+};
+</script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="config.js"></script>
+<script src="padrao.js"></script>
+<script src="admin.js"></script>
+<script src="app-supabase.js"></script>
+</body>
+</html>
